@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Композ разбирается
+        env:
+          PLATFORM_NETWORK: ci-network
+          DATA_DB_PASSWORD: ci-password
+          VECTOR_DB_PASSWORD: ci-password
+        run: >
+          docker compose --env-file .env.example -f compose.news.yaml config -q
+      - name: Лончеры синтаксически целы
+        run: bash -n news-up.sh && bash -n bridge-up-news.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Зависимости
+        run: python -m pip install --quiet --find-links wheels -e . pytest pytest-asyncio ruff
+      - name: Линтер
+        run: python -m ruff check .
+      - name: Офлайн-тесты
+        run: python -m pytest tests -q
